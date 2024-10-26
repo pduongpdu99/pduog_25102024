@@ -1,0 +1,43 @@
+import { Logger, Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+
+import { SYSTEMS as APP_CONFIG } from '@common/config/app.config.json';
+import { <SUB_NAME_UPPER> as CONFIG } from '@common/config/<file-config>';
+import { TransportModule } from '@common/transport';
+import { doParsingMessage } from '@server/common/messages/parser.message';
+import { <SUB_NAME>Controller } from './<SUB_NAME_LOWER>.controller';
+
+@Module({
+    imports: [
+        ConfigModule.forRoot({
+            isGlobal: true,
+        }),
+        TransportModule.register(CONFIG.MICROSERVICE, CONFIG.NAME),
+    ],
+    controllers: [<SUB_NAME>Controller],
+    providers: [
+        Logger,
+        {
+            provide: APP_CONFIG.QUERY_PIPE_PARAMS,
+            useValue: {
+                item: {
+                    defaultSystemFields: false, 
+                },
+                list: {
+                    filterFields: <FILTER_FIELD>,
+                    searchFields: <SEARCH_FIELD>, 
+                    orderFields: <ORDER_FIELD>,
+                },
+            },
+        },
+        {
+            provide: APP_CONFIG.QUERY_PIPE_NAME,
+            useValue: CONFIG.NAME,
+        },
+        {
+            provide: APP_CONFIG.MESSAGE_CONFIG,
+            useFactory: () => doParsingMessage(CONFIG.NAME),
+        },
+    ],
+})
+export class <SUB_NAME>Module {}

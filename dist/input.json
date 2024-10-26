@@ -1,0 +1,38 @@
+{
+    "MICROSERVICE_NAME": "SYSTEMS",
+    "NAME": "SYSTEM.SERVER",
+    "USER": {
+        "NAME": "user.server",
+        "MICROSERVICE": "SYSTEMS",
+        "I18N": "sub-upper-name",
+        "QUERY": {
+            "FILTER_FIELD": ["name", "email"],
+            "SEARCH_FIELD": [],
+            "ORDER_FIELD": []
+        },
+        "API": {
+            "GET_LIST": "<get-list-message-pattern>",
+            "GET_BY_ID": "<get-by-id-message-pattern>",
+            "POST": "<post-message-pattern>",
+            "PATCH": "<patch-message-pattern>",
+            "DELETE": "<delete-message-pattern>"
+        }
+    },
+    "ROLE": {
+        "NAME": "role.server",
+        "MICROSERVICE": "SYSTEMS",
+        "I18N": "sub-upper-name",
+        "QUERY": {
+            "FILTER_FIELD": ["permission"],
+            "SEARCH_FIELD": [],
+            "ORDER_FIELD": []
+        },
+        "API": {
+            "GET_LIST": "<get-list-message-pattern>",
+            "GET_BY_ID": "<get-by-id-message-pattern>",
+            "POST": "<post-message-pattern>",
+            "PATCH": "<patch-message-pattern>",
+            "DELETE": "<delete-message-pattern>"
+        }
+    }
+}
