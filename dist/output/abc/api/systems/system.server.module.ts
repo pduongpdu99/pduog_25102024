@@ -1,14 +1,15 @@
 import { Logger, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
-import { <PARENT_NAME_LOWER> as APP_CONFIG } from '@common/config/app.config.json';
+import { systems as APP_CONFIG } from '@common/config/app.config.json';
 import { CONFIG } from '@common/config/systems.service.config.json';
 import { doParsingMessage } from '@server/common/messages/parser.message';
 
-import { <PARENT_NAME>Controller } from './<PARENT_NAME_LOWER>.controller';
-import { <PARENT_NAME>Service } from './<PARENT_NAME_LOWER>.service';
+import { SystemsController } from './systems.controller';
+import { SystemsService } from './systems.service';
 
-<LIST_SUB_MODULE_IMPORT>
+import { UserServerModule } from './user/user.module';
+import { RoleServerModule } from './role/role.module'
 
 @Module({
     imports: [
@@ -17,16 +18,17 @@ import { <PARENT_NAME>Service } from './<PARENT_NAME_LOWER>.service';
             envFilePath: '.env.dev',
         }),
 
-        <LIST_SUB_MODULE_INJECT>
+        UserServerModule,
+		RoleServerModule
     ],
     providers: [
         Logger,
-        <PARENT_NAME>Service,
+        SystemsService,
         {
             provide: APP_CONFIG.MESSAGE_CONFIG,
             useFactory: () => doParsingMessage(CONFIG.NAME),
         },
     ],
-    controllers: [<PARENT_NAME>Controller],
+    controllers: [SystemsController],
 })
-export class <PARENT_NAME>Module {}
+export class SystemsModule {}

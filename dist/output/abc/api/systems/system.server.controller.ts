@@ -1,32 +1,37 @@
-import { Logger, Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { Controller, Req } from '@nestjs/common';
+import { Request } from 'express';
 
-import { <PARENT_NAME_LOWER> as APP_CONFIG } from '@common/config/app.config.json';
 import { CONFIG } from '@common/config/systems.service.config.json';
-import { doParsingMessage } from '@server/common/messages/parser.message';
+import { BaseServerController } from '@server/common/bases';
+import { SwaggerController } from '@server/common/decorators/auth';
+import { MethodConfig } from '@server/common/decorators/crud';
+import { SystemsService } from './systems.server.service';
 
-import { <PARENT_NAME>Controller } from './<PARENT_NAME_LOWER>.controller';
-import { <PARENT_NAME>Service } from './<PARENT_NAME_LOWER>.service';
+@SwaggerController(CONFIG.NAME)
+@Controller(CONFIG.NAME)
+export class SystemsController extends BaseServerController {
+    constructor(private readonly apiService: SystemsService) {
+        super();
+    }
 
-<LIST_SUB_MODULE_IMPORT>
+    @MethodConfig(CONFIG.API.GET_PERMISSION_CODE)
+    getConfigPermissionCodes(@Req() req: Request) {
+        this.console(CONFIG.API.GET_PERMISSION_CODE);
 
-@Module({
-    imports: [
-        ConfigModule.forRoot({
-            isGlobal: true,
-            envFilePath: '.env.dev',
-        }),
+        return this.apiService.getPermissionCode();
+    }
 
-        <LIST_SUB_MODULE_INJECT>
-    ],
-    providers: [
-        Logger,
-        <PARENT_NAME>Service,
-        {
-            provide: APP_CONFIG.MESSAGE_CONFIG,
-            useFactory: () => doParsingMessage(CONFIG.NAME),
-        },
-    ],
-    controllers: [<PARENT_NAME>Controller],
-})
-export class <PARENT_NAME>Module {}
+    @MethodConfig(CONFIG.API.GET_SETTINGS)
+    getConfigSettings(@Req() req: Request) {
+        this.console(CONFIG.API.GET_SETTINGS);
+
+        return this.apiService.getConfigSettings();
+    }
+
+    @MethodConfig(CONFIG.API.GET_SERVICES)
+    getConfigServices(@Req() req: Request) {
+        this.console(CONFIG.API.GET_SERVICES);
+
+        return this.apiService.getConfigServices();
+    }
+}

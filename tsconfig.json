@@ -12,8 +12,7 @@
     "target": "es5",
     "module": "commonjs",
     "lib": [
-      "es2021",
-      "ES2015",
+      "ES6",
       "DOM",
       "ESNext"
     ],

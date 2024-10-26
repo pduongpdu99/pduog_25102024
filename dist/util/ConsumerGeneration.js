@@ -48,7 +48,7 @@ var ConsumerGeneration = /** @class */ (function () {
         this.configPath = configPath;
         this.config = config;
         this.prefix = {
-            replaceAll: false,
+            replace: false,
             rootModule: false,
             rootController: false,
             rootService: false,
@@ -82,10 +82,10 @@ var ConsumerGeneration = /** @class */ (function () {
     };
     ConsumerGeneration.prototype.doGenerateStructure = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var targetFolder, apiFolder, metadata, PARENT_FOLDER, PARENT_FOLDER_NAME, parentPath, _i, _a, _b, key, value;
-            var _this = this;
+            var targetFolder, apiFolder, metadata, PARENT_FOLDER, PARENT_FOLDER_NAME, parentPath, rootName, templatePath, rootModuleData, rootControllerData, rootServiceData, _i, _a, _b, key, value;
             return __generator(this, function (_c) {
                 targetFolder = (0, path_1.join)(__dirname, '..', this.config.TARGET_FOLDER);
+                (0, fs_1.mkdirSync)(targetFolder, { recursive: true });
                 // check target folder
                 if (!(0, fs_1.existsSync)(targetFolder)) {
                     (0, fs_1.mkdirSync)(targetFolder);
@@ -106,29 +106,16 @@ var ConsumerGeneration = /** @class */ (function () {
                 delete metadata.MICROSERVICE_NAME;
                 delete metadata.NAME;
                 parentPath = (0, path_1.join)(apiFolder, PARENT_FOLDER.toLowerCase());
-                if (!(0, fs_1.existsSync)(parentPath)) {
-                    (0, fs_1.mkdir)(parentPath, function (err) {
-                        if (err) {
-                            // LOG: Error creating parent folder
-                            console.error("Error creating parent folder:", err);
-                            return;
-                        }
-                        var rootName = PARENT_FOLDER_NAME.toLowerCase();
-                        var templatePath = (0, path_1.join)(__dirname, '..', 'templates');
-                        (0, path_1.join)(templatePath, "".concat(rootName, ".module.ts"));
-                        var rootModuleData = (0, fs_1.readFileSync)((0, path_1.join)(templatePath, "parent-module.txt"), 'utf8').toString();
-                        var rootControllerData = (0, fs_1.readFileSync)((0, path_1.join)(templatePath, "parent-controller.txt"), 'utf8').toString();
-                        var rootServiceData = (0, fs_1.readFileSync)((0, path_1.join)(templatePath, "parent-service.txt"), 'utf8').toString();
-                        (0, fs_1.writeFileSync)((0, path_1.join)(parentPath, "".concat(rootName, ".module.ts")), rootModuleData, { flag: "w" });
-                        (0, fs_1.writeFileSync)((0, path_1.join)(parentPath, "".concat(rootName, ".controller.ts")), rootModuleData, { flag: "w" });
-                        (0, fs_1.writeFileSync)((0, path_1.join)(parentPath, "".concat(rootName, ".service.ts")), rootModuleData, { flag: "w" });
-                        _this.doGenerateParentModuleByTemplate((0, path_1.join)(parentPath, "".concat(rootName, ".module.ts")), rootModuleData, PARENT_FOLDER_NAME);
-                        _this.doGenerateParentControlerByTemplate((0, path_1.join)(parentPath, "".concat(rootName, ".controller.ts")), rootControllerData);
-                        _this.doGenerateParentServiceByTemplate((0, path_1.join)(parentPath, "".concat(rootName, ".service.ts")), rootServiceData);
-                        // LOG: parent folder created successfully
-                        console.log("parent folder created successfully");
-                    });
-                }
+                rootName = PARENT_FOLDER_NAME.toLowerCase();
+                templatePath = (0, path_1.join)(__dirname, '..', 'templates');
+                rootModuleData = (0, fs_1.readFileSync)((0, path_1.join)(templatePath, "parent-module.txt"), 'utf8').toString();
+                rootControllerData = (0, fs_1.readFileSync)((0, path_1.join)(templatePath, "parent-controller.txt"), 'utf8').toString();
+                rootServiceData = (0, fs_1.readFileSync)((0, path_1.join)(templatePath, "parent-service.txt"), 'utf8').toString();
+                this.doGenerateParentModuleByTemplate((0, path_1.join)(__dirname, '..', this.config.TARGET_FOLDER, this.config.API_FOLDER, this.microserviceName.toLowerCase(), "".concat(rootName, ".module.ts")), rootModuleData, PARENT_FOLDER_NAME);
+                this.doGenerateParentControlerByTemplate((0, path_1.join)(__dirname, '..', this.config.TARGET_FOLDER, this.config.API_FOLDER, this.microserviceName.toLowerCase(), "".concat(rootName, ".controller.ts")), rootControllerData);
+                this.doGenerateParentServiceByTemplate((0, path_1.join)(__dirname, '..', this.config.TARGET_FOLDER, this.config.API_FOLDER, this.microserviceName.toLowerCase(), "".concat(rootName, ".service.ts")), rootServiceData);
+                // LOG: parent folder created successfully
+                console.log("parent folder created successfully");
                 for (_i = 0, _a = Object.entries(metadata); _i < _a.length; _i++) {
                     _b = _a[_i], key = _b[0], value = _b[1];
                     this.subCreateAll(parentPath, key, value, metadata);
@@ -141,26 +128,20 @@ var ConsumerGeneration = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             var subName, subUpperName;
             return __generator(this, function (_a) {
-                path = (0, path_1.join)(__dirname, path);
                 subName = config.NAME.toLowerCase();
                 subUpperName = config.NAME.toLowerCase();
                 subName = subName.split(".").map(function (i) { return i[0].toUpperCase() + i.slice(1); }).join("");
                 subUpperName = subUpperName.split(".").map(function (i) { return i[0].toUpperCase() + i.slice(1); }).join("_");
-                template = template.replaceAll('<SUB_NAME>', subName);
-                template = template.replaceAll('<SUB_NAME_LOWER>', subName.toLowerCase());
-                template = template.replaceAll('<SUB_NAME_UPPER>', subUpperName.toUpperCase());
-                template = template.replaceAll('<file-config>', this.configPath);
-                if ((0, fs_1.existsSync)(path)) {
-                    (0, fs_1.writeFile)(path, template, function (err) {
-                        if (err) {
-                            // LOG: Error creating controller
-                            console.error("Error upadting controller:", err);
-                            return;
-                        }
-                        // LOG: controller created successfully
-                        console.log("".concat(subName, " controller updated successfully"));
-                    });
-                }
+                template = template.replace(/<SUB_NAME>/g, subName);
+                template = template.replace(/<SUB_NAME_LOWER>/g, subName.toLowerCase());
+                template = template.replace(/<SUB_NAME_UPPER>/g, subUpperName.toUpperCase());
+                template = template.replace(/<file-config>/g, this.configPath);
+                (0, fs_1.writeFile)(path, template, function (err) {
+                    if (err) {
+                        console.log(err);
+                    }
+                    console.log("Generated ".concat(path));
+                });
                 return [2 /*return*/];
             });
         });
@@ -169,29 +150,23 @@ var ConsumerGeneration = /** @class */ (function () {
         return __awaiter(this, void 0, void 0, function () {
             var subName, subUpperName;
             return __generator(this, function (_a) {
-                path = (0, path_1.join)(__dirname, path);
                 subName = config.NAME.toLowerCase();
                 subUpperName = config.NAME.toLowerCase();
                 subName = subName.split(".").map(function (i) { return i[0].toUpperCase() + i.slice(1); }).join("");
                 subUpperName = subUpperName.split(".").map(function (i) { return i[0].toUpperCase() + i.slice(1); }).join("_");
-                template = template.replaceAll('<SUB_NAME>', subName);
-                template = template.replaceAll('<SUB_NAME_LOWER>', subName.toLowerCase());
-                template = template.replaceAll('<SUB_NAME_UPPER>', subUpperName.toUpperCase());
-                template = template.replaceAll('<FILTER_FIELD>', "[".concat(config.QUERY.FILTER_FIELD.join(", "), "]"));
-                template = template.replaceAll('<SEARCH_FIELD>', "[".concat(config.QUERY.SEARCH_FIELD.join(", "), "]"));
-                template = template.replaceAll('<ORDER_FIELD>', "[".concat(config.QUERY.ORDER_FIELD.join(", "), "]"));
-                template = template.replaceAll('<file-config>', this.configPath);
-                if ((0, fs_1.existsSync)(path)) {
-                    (0, fs_1.writeFile)(path, template, function (err) {
-                        if (err) {
-                            // LOG: Error creating controller
-                            console.error("Error upadting controller:", err);
-                            return;
-                        }
-                        // LOG: controller created successfully
-                        console.log("".concat(subName, " module updated successfully"));
-                    });
-                }
+                template = template.replace(/<SUB_NAME>/g, subName);
+                template = template.replace(/<SUB_NAME_LOWER>/g, subName.toLowerCase());
+                template = template.replace(/<SUB_NAME_UPPER>/g, subUpperName.toUpperCase());
+                template = template.replace(/<FILTER_FIELD>/g, "[".concat(config.QUERY.FILTER_FIELD.join(", "), "]"));
+                template = template.replace(/<SEARCH_FIELD>/g, "[".concat(config.QUERY.SEARCH_FIELD.join(", "), "]"));
+                template = template.replace(/<ORDER_FIELD>/g, "[".concat(config.QUERY.ORDER_FIELD.join(", "), "]"));
+                template = template.replace(/<file-config>/g, this.configPath);
+                (0, fs_1.writeFile)(path, template, function (err) {
+                    if (err) {
+                        console.log(err);
+                    }
+                    console.log("Generated ".concat(path));
+                });
                 return [2 /*return*/];
             });
         });
@@ -199,9 +174,7 @@ var ConsumerGeneration = /** @class */ (function () {
     ConsumerGeneration.prototype.doGenerateParentModuleByTemplate = function (path, template, name) {
         return __awaiter(this, void 0, void 0, function () {
             var lower, subName, subUpperName, microNameLower, parentNorName, meta, moduleImports, moduleInjects, _i, _a, _b, MODEL_NAME, CONFIG, name_1, nameLower, norm, modelNameLower;
-            var _this = this;
             return __generator(this, function (_c) {
-                path = (0, path_1.join)(__dirname, path);
                 lower = name.toLowerCase();
                 subName = name.toLowerCase();
                 subUpperName = name.toLowerCase();
@@ -219,31 +192,26 @@ var ConsumerGeneration = /** @class */ (function () {
                     name_1 = CONFIG.NAME;
                     nameLower = name_1.toLowerCase();
                     norm = nameLower.split('.').map(function (i) { return i[0].toUpperCase() + i.slice(1); }).join('');
-                    modelNameLower = MODEL_NAME.toLowerCase().replaceAll('_', '-');
+                    modelNameLower = MODEL_NAME.toLowerCase().replace('_', '-');
                     moduleImports.push("import { ".concat(norm, "Module } from './").concat(modelNameLower, "/").concat(modelNameLower, ".module'"));
                     moduleInjects.push("".concat(norm, "Module"));
                 }
-                template = template.replaceAll('<SUB_NAME>', subName);
-                template = template.replaceAll('<SUB_NAME_LOWER>', lower);
-                template = template.replaceAll('<SUB_NAME_UPPER>', subUpperName);
-                template = template.replaceAll('<MODEL_LOWER>', name.toLowerCase());
-                template = template.replaceAll('<PARENT_NAME>', parentNorName);
-                template = template.replaceAll('<PARENT_NAME_UPPER>', this.microserviceName);
-                template = template.replaceAll('<PARENT_NAME_LOWER>', microNameLower);
-                template = template.replaceAll('<LIST_SUB_MODULE_IMPORT>', moduleImports.join(';\n'));
-                template = template.replaceAll('<LIST_SUB_MODULE_INJECT>', moduleInjects.join(",\n\t\t"));
-                template = template.replaceAll('<file-config>', this.configPath);
-                if ((0, fs_1.existsSync)(path)) {
-                    (0, fs_1.writeFile)(path, template, function (err) {
-                        if (err) {
-                            // LOG: Error creating controller
-                            console.error("Error upadting controller:", err);
-                            return;
-                        }
-                        // LOG: controller created successfully
-                        console.log("".concat(_this.microserviceName, " module updated successfully"));
-                    });
-                }
+                template = template.replace(/<SUB_NAME>/g, subName);
+                template = template.replace(/<SUB_NAME_LOWER>/g, lower);
+                template = template.replace(/<SUB_NAME_UPPER>/g, subUpperName);
+                template = template.replace(/<MODEL_LOWER>/g, name.toLowerCase());
+                template = template.replace(/<PARENT_NAME>/g, parentNorName);
+                template = template.replace(/<PARENT_NAME_UPPER>/g, this.microserviceName);
+                template = template.replace(/<PARENT_NAME_LOWER>/g, microNameLower);
+                template = template.replace(/<LIST_SUB_MODULE_IMPORT>/g, moduleImports.join(';\n'));
+                template = template.replace(/<LIST_SUB_MODULE_INJECT>/g, moduleInjects.join(",\n\t\t"));
+                template = template.replace(/<file-config>/g, this.configPath);
+                (0, fs_1.writeFile)(path, template, function (err) {
+                    if (err) {
+                        console.log(err);
+                    }
+                    console.log("Generated ".concat(path));
+                });
                 return [2 /*return*/];
             });
         });
@@ -251,23 +219,16 @@ var ConsumerGeneration = /** @class */ (function () {
     ConsumerGeneration.prototype.doGenerateParentControlerByTemplate = function (path, template) {
         return __awaiter(this, void 0, void 0, function () {
             var microNameLower, parentNorName;
-            var _this = this;
             return __generator(this, function (_a) {
-                path = (0, path_1.join)(__dirname, path);
                 microNameLower = this.microserviceName.toLowerCase();
                 parentNorName = microNameLower.split("_").map(function (i) { return i[0].toUpperCase() + i.slice(1); }).join("");
-                template = template.replaceAll('<PARENT_NAME>', parentNorName);
-                if ((0, fs_1.existsSync)(path)) {
-                    (0, fs_1.writeFile)(path, template, function (err) {
-                        if (err) {
-                            // LOG: Error creating controller
-                            console.error("Error upadting controller:", err);
-                            return;
-                        }
-                        // LOG: controller created successfully
-                        console.log("".concat(_this.microserviceName, " controller updated successfully"));
-                    });
-                }
+                template = template.replace(/<PARENT_NAME>/g, parentNorName);
+                (0, fs_1.writeFile)(path, template, function (err) {
+                    if (err) {
+                        console.log(err);
+                    }
+                    console.log("Generated ".concat(path));
+                });
                 return [2 /*return*/];
             });
         });
@@ -275,23 +236,16 @@ var ConsumerGeneration = /** @class */ (function () {
     ConsumerGeneration.prototype.doGenerateParentServiceByTemplate = function (path, template) {
         return __awaiter(this, void 0, void 0, function () {
             var microNameLower, parentNorName;
-            var _this = this;
             return __generator(this, function (_a) {
-                path = (0, path_1.join)(__dirname, path);
                 microNameLower = this.microserviceName.toLowerCase();
                 parentNorName = microNameLower.split("_").map(function (i) { return i[0].toUpperCase() + i.slice(1); }).join("");
-                template = template.replaceAll('<PARENT_NAME>', parentNorName);
-                if ((0, fs_1.existsSync)(path)) {
-                    (0, fs_1.writeFile)(path, template, function (err) {
-                        if (err) {
-                            // LOG: Error creating controller
-                            console.error("Error upadting controller:", err);
-                            return;
-                        }
-                        // LOG: controller created successfully
-                        console.log("".concat(_this.microserviceName, " service updated successfully"));
-                    });
-                }
+                template = template.replace(/<PARENT_NAME>/g, parentNorName);
+                (0, fs_1.writeFile)(path, template, function (err) {
+                    if (err) {
+                        console.log(err);
+                    }
+                    console.log("Generated ".concat(path));
+                });
                 return [2 /*return*/];
             });
         });
@@ -305,31 +259,27 @@ var ConsumerGeneration = /** @class */ (function () {
         }
     };
     ConsumerGeneration.prototype.subCreateAll = function (parentPath, key, value, metadata) {
-        var _this = this;
         var subPath = (0, path_1.join)(parentPath, key.toLowerCase());
-        if (!(0, fs_1.existsSync)(subPath)) {
-            (0, fs_1.mkdir)(subPath, function (err) {
-                if (err) {
-                    console.error("Error creating sub folder:", err);
-                    return;
-                }
-                var rootName = value.NAME.toLowerCase();
-                var rootModuleData = "";
-                var rootControllerData = "";
-                _this.subCreateController(subPath, rootName, rootControllerData, metadata[key]);
-                _this.subCreateModule(subPath, rootName, rootModuleData, metadata[key]);
-                // LOG: sub folder created successfully
-                console.log("sub folder created successfully");
-            });
+        console.log(subPath);
+        if ((0, fs_1.existsSync)(subPath)) {
+            (0, fs_1.mkdirSync)(subPath, { recursive: true });
         }
+        (0, fs_1.mkdirSync)(subPath, { recursive: true });
+        var rootName = value.NAME.toLowerCase();
+        var rootModuleData = (0, fs_1.readFileSync)((0, path_1.join)(__dirname, '..', './templates/sub-module.txt'), 'utf8').toString();
+        var rootControllerData = (0, fs_1.readFileSync)((0, path_1.join)(__dirname, '..', './templates/sub-controller.txt'), 'utf8').toString();
+        this.subCreateController(subPath, rootName, rootControllerData, metadata[key]);
+        this.subCreateModule(subPath, rootName, rootModuleData, metadata[key]);
+        // LOG: sub folder created successfully
+        console.log("sub folder created successfully");
     };
     ConsumerGeneration.prototype.subCreateController = function (subPath, rootName, template, metadata) {
         (0, fs_1.writeFileSync)((0, path_1.join)(subPath, "".concat(rootName, ".controller.ts")), template, { flag: "w" });
-        this.doGenerateSubControllerByTemplate((0, path_1.join)(subPath, "".concat(rootName, ".controller.ts")), (0, fs_1.readFileSync)((0, path_1.join)(__dirname, '..', './templates/sub-controller.txt'), 'utf8').toString(), metadata);
+        this.doGenerateSubControllerByTemplate((0, path_1.join)(subPath, "".concat(rootName, ".controller.ts")), template, metadata);
     };
     ConsumerGeneration.prototype.subCreateModule = function (subPath, rootName, template, metadata) {
         (0, fs_1.writeFileSync)((0, path_1.join)(subPath, "".concat(rootName, ".module.ts")), template, { flag: "w" });
-        this.doGenerateSubModuleByTemplate((0, path_1.join)(subPath, "".concat(rootName, ".module.ts")), (0, fs_1.readFileSync)((0, path_1.join)(__dirname, '..', './templates/sub-module.txt'), 'utf8').toString(), metadata);
+        this.doGenerateSubModuleByTemplate((0, path_1.join)(subPath, "".concat(rootName, ".module.ts")), template, metadata);
     };
     ConsumerGeneration.prototype.runtime = function () {
         return __awaiter(this, void 0, void 0, function () {
@@ -351,11 +301,11 @@ var ConsumerGeneration = /** @class */ (function () {
                                 message: 'Do you want to create new? ',
                             }).then(function (answer) {
                                 isReplaceOutput = ['y', 'Y', 'yes'].indexOf(answer.answer) !== -1;
-                                _this.prefix.replaceAll = isReplaceOutput;
+                                _this.prefix.replace = isReplaceOutput;
                             })];
                     case 1:
                         _a.sent();
-                        if (!this.prefix.replaceAll) return [3 /*break*/, 5];
+                        if (!this.prefix.replace) return [3 /*break*/, 5];
                         if (!this.validate()) return [3 /*break*/, 3];
                         this.doDeleteStructure((0, path_1.join)(__dirname, '..', this.config.TARGET_FOLDER));
                         return [4 /*yield*/, this.doGenerateStructure()];

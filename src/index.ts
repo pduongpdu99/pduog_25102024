@@ -1,6 +1,5 @@
 import { join } from "path";
 import { ConsumerGeneration } from "./util/ConsumerGeneration";
-import { readFileSync } from "fs";
 
 // const jsonData = JSON.stringify({ name: "John", age: 30 });
 // const blob = new Blob([jsonData], { type: "application/json" });

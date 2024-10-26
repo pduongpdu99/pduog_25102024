@@ -1,32 +1,81 @@
-import { Logger, Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { SYSTEMS as APP_CONFIG } from '@common/config/app.config.json';
+import { System } from '@common/files/system.files';
+import { CustomResponse, HttpMiddlewares } from '@common/middlewares/http.middlewares';
+import { HttpStatus, Injectable } from '@nestjs/common';
 
-import { <PARENT_NAME_LOWER> as APP_CONFIG } from '@common/config/app.config.json';
-import { CONFIG } from '@common/config/systems.service.config.json';
-import { doParsingMessage } from '@server/common/messages/parser.message';
+@Injectable()
+export class SystemsService extends HttpMiddlewares {
+    private getTag(str: string): string {
+        const tagMappings = [
+            { regex: /^get-[a-z]+(_[a-z]+)*s$/g, tag: 'VIEW' },
+            { regex: /^get-[a-z]+(_[a-z]+)*s-id/g, tag: 'VIEW' },
+            { regex: /^post-[a-z]+(_[a-z]+)*s$/g, tag: 'CREATE' },
+            { regex: /^patch-[a-z]+(_[a-z]+)*s-id$/g, tag: 'UPDATE' },
+            { regex: /^delete-[a-z]+(_[a-z]+)*s-id$/g, tag: 'DELETE' },
+        ];
 
-import { <PARENT_NAME>Controller } from './<PARENT_NAME_LOWER>.controller';
-import { <PARENT_NAME>Service } from './<PARENT_NAME_LOWER>.service';
+        for (const { regex, tag } of tagMappings) {
+            if (str.match(regex) !== null) {
+                return tag;
+            }
+        }
 
-<LIST_SUB_MODULE_IMPORT>
+        return 'APPROVE';
+    }
 
-@Module({
-    imports: [
-        ConfigModule.forRoot({
-            isGlobal: true,
-            envFilePath: '.env.dev',
-        }),
+    private createItemsForService(service: any, key: string): any[] {
+        const items: { value: string; label: string; isFixed?: boolean; isDisabled?: boolean; tag: string }[] = [];
 
-        <LIST_SUB_MODULE_INJECT>
-    ],
-    providers: [
-        Logger,
-        <PARENT_NAME>Service,
-        {
-            provide: APP_CONFIG.MESSAGE_CONFIG,
-            useFactory: () => doParsingMessage(CONFIG.NAME),
-        },
-    ],
-    controllers: [<PARENT_NAME>Controller],
-})
-export class <PARENT_NAME>Module {}
+        if (service.API) {
+            for (const kei of Object.keys(service.API)) {
+                const value = service.API[kei];
+                const label = this.formatLabel(kei);
+                const item = {
+                    value,
+                    label,
+                    tag: this.getTag(value),
+                    isFixed: APP_CONFIG.REQUIRE[key]?.[kei] !== undefined,
+                    isDisabled: APP_CONFIG.EXCLUDE[key]?.[kei] !== undefined,
+                };
+
+                items.push(item);
+            }
+        }
+
+        return items;
+    }
+
+    private formatLabel(key: string): string {
+        let label = key.toLowerCase().replaceAll('_', ' ');
+        return label.charAt(0).toUpperCase() + label.slice(1);
+    }
+
+    getPermissionCode(): CustomResponse {
+        return this.success(APP_CONFIG.PERMISSION_COVER);
+    }
+
+    getConfigSettings(): CustomResponse {
+        return this.success(APP_CONFIG.SETTINGS);
+    }
+
+    getConfigServices(): CustomResponse {
+        try {
+            const configs = System.getKeyConfigAPI();
+            if (!configs) {
+                return this.error(`\x1b[35m apps/server/systems/systems.server.service.ts:41\x1b[0m`, HttpStatus.BAD_GATEWAY);
+            }
+
+            const { keys, services } = configs;
+            const response = keys.map(key => {
+                const items = this.createItemsForService(services[key], key);
+                return {
+                    label: this.formatLabel(key),
+                    options: items,
+                };
+            });
+            return this.success(response);
+        } catch (error) {
+            return this.error(`\x1b[35m apps/server/systems/systems.server.service.ts:76\x1b[0m ${error}`, HttpStatus.BAD_GATEWAY);
+        }
+    }
+}
