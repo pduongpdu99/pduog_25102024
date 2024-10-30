@@ -4,7 +4,7 @@ import { ClientProxy } from '@nestjs/microservices';
 import { Request } from 'express';
 
 // Import config
-import { ROLE_SERVER as CONFIG } from '@common/config/C:\Users\pduon\OneDrive\Desktop\projects\pduog_25102024\dist\input.json';
+import { ALO_SERVER as CONFIG } from '@common/config/src\input.json';
 
 // Import libs
 import { QueryPipe } from '@common/pipe/query-pipe';
@@ -21,7 +21,7 @@ import { MethodConfig } from '@server/common/decorators/crud';
 @Controller(CONFIG.NAME)
 @UseGuards(JwtGuard)
 // @UseInterceptors(CaslInterceptor)
-export class RoleServerController extends CRUDServerController<Record<string, any>, Record<string, any>> {
+export class AloServerController extends CRUDServerController<Record<string, any>, Record<string, any>> {
     constructor(@Inject(CONFIG.NAME) client: ClientProxy) {
         super(client, CONFIG.API);
     }
@@ -29,7 +29,7 @@ export class RoleServerController extends CRUDServerController<Record<string, an
     // Default CRUD
     @MethodConfig(CONFIG.API.GET_LIST)
     @UsePipes(QueryPipe)
-    getRoleServerList(@GetUser() currentUser: CurrentUser, @Query() query: PaginationQueryDto, @Req() request: Request) {
+    getAloServerList(@GetUser() currentUser: CurrentUser, @Query() query: PaginationQueryDto, @Req() request: Request) {
         const payload: GET_ALL_PAYLOAD = {
             query,
             currentUser,
@@ -40,7 +40,7 @@ export class RoleServerController extends CRUDServerController<Record<string, an
     }
 
     @MethodConfig(CONFIG.API.GET_BY_ID)
-    getRoleServerById(@GetUser() currentUser: CurrentUser, @Param('id', ParseIntPipe) id: number, @Query() query: PaginationQueryDto, @Req() request: Request) {
+    getAloServerById(@GetUser() currentUser: CurrentUser, @Param('id', ParseIntPipe) id: number, @Query() query: PaginationQueryDto, @Req() request: Request) {
         const payload: GET_BY_ID_PAYLOAD = {
             currentUser,
             id,
@@ -53,7 +53,7 @@ export class RoleServerController extends CRUDServerController<Record<string, an
 
     @Public()
     @MethodConfig(CONFIG.API.POST)
-    postRoleServer(@GetUser() currentUser: CurrentUser, @Query() query: PaginationQueryDto, @Body() dto: Record<string, any>, @Req() request: Request) {
+    postAloServer(@GetUser() currentUser: CurrentUser, @Query() query: PaginationQueryDto, @Body() dto: Record<string, any>, @Req() request: Request) {
         // @Public() => currentUser: undefined
         const payload: POST_PAYLOAD<Record<string, any>> = {
             currentUser: undefined,
@@ -65,7 +65,7 @@ export class RoleServerController extends CRUDServerController<Record<string, an
     }
 
     @MethodConfig(CONFIG.API.PATCH)
-    patchRoleServerId(
+    patchAloServerId(
         @GetUser() currentUser: CurrentUser,
         @Param('id', ParseIntPipe) id: number,
         @Query() query: PaginationQueryDto,
@@ -84,7 +84,7 @@ export class RoleServerController extends CRUDServerController<Record<string, an
     }
 
     @MethodConfig(CONFIG.API.DELETE)
-    deleteRoleServerId(@GetUser() currentUser: CurrentUser, @Param('id', ParseIntPipe) id: number, @Query() query: PaginationQueryDto, @Req() request: Request) {
+    deleteAloServerId(@GetUser() currentUser: CurrentUser, @Param('id', ParseIntPipe) id: number, @Query() query: PaginationQueryDto, @Req() request: Request) {
         const payload: DELETE_PAYLOAD = {
             currentUser,
             id,

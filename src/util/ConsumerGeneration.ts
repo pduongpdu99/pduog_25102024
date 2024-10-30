@@ -1,14 +1,18 @@
 import { IGeneration } from "./IGeneration";
 import { IGenerationValidation } from "./IGenerationValidation";
 
-import { mkdir, existsSync, rmSync, writeFileSync, readFileSync, mkdirSync, writeFile } from "fs";
+import { existsSync, rmSync, writeFileSync, readFileSync, mkdirSync, writeFile } from "fs";
 import { join } from "path";
 import inquirer from 'inquirer';
+import { StringProcessor } from "./StringProcessor";
 
 
 export class ConsumerGeneration implements IGeneration, IGenerationValidation {
     private input: string;
     private microserviceName: string;
+    private name: string;
+    private meta: Record<string, any>;
+
     private prefix: {
         replace: boolean;
         rootModule: boolean;
@@ -24,7 +28,10 @@ export class ConsumerGeneration implements IGeneration, IGenerationValidation {
         this.input = readFileSync(configPath, 'utf-8').toString();
         const meta: Record<string, any> = JSON.parse(this.input);
         this.microserviceName = meta.MICROSERVICE_NAME;
+        this.name = meta.NAME.toLowerCase();
         delete meta.MICROSERVICE_NAME;
+        delete meta.NAME;
+        this.meta = meta;
         for (let key of Object.keys(meta)) {
             key = key.toLowerCase();
             this.prefix[`${key}All`] = false;
@@ -53,7 +60,7 @@ export class ConsumerGeneration implements IGeneration, IGenerationValidation {
     }
 
     async doGenerateStructure(): Promise<void> {
-        const targetFolder: string = join(__dirname, '..', this.config.TARGET_FOLDER);
+        const targetFolder: string = join(this.config.ORIGIN_PATH, this.config.TARGET_FOLDER);
         mkdirSync(targetFolder, { recursive: true });
 
         // check target folder
@@ -72,37 +79,34 @@ export class ConsumerGeneration implements IGeneration, IGenerationValidation {
         // LOG: generate structure
         console.log("Generating structure...");
 
-        let metadata: Record<string, any> = {};
-        metadata = JSON.parse(this.input as string);
-
-        const PARENT_FOLDER = metadata.MICROSERVICE_NAME;
-        const PARENT_FOLDER_NAME = metadata.NAME;
-        delete metadata.MICROSERVICE_NAME;
-        delete metadata.NAME;
+        let metadata = this.meta;
+        const PARENT_FOLDER = this.microserviceName;
+        const PARENT_FOLDER_NAME = this.name;
         const parentPath = join(apiFolder, PARENT_FOLDER.toLowerCase());
 
         const rootName = PARENT_FOLDER_NAME.toLowerCase();
-        const templatePath = join(__dirname, '..', 'templates');
+        const templatePath = join(this.config.ORIGIN_PATH, 'templates');
         const rootModuleData = readFileSync(join(templatePath, `parent-module.txt`), 'utf8').toString();
         const rootControllerData = readFileSync(join(templatePath, `parent-controller.txt`), 'utf8').toString();
         const rootServiceData = readFileSync(join(templatePath, `parent-service.txt`), 'utf8').toString();
         this.doGenerateParentModuleByTemplate(
-            join(__dirname, '..', this.config.TARGET_FOLDER, this.config.API_FOLDER, this.microserviceName.toLowerCase(), `${rootName}.module.ts`),
+            join(this.config.ORIGIN_PATH, this.config.TARGET_FOLDER, this.config.API_FOLDER, this.microserviceName.toLowerCase(), `${rootName}.module.ts`),
             rootModuleData,
             PARENT_FOLDER_NAME
         );
         this.doGenerateParentControlerByTemplate(
-            join(__dirname, '..', this.config.TARGET_FOLDER, this.config.API_FOLDER, this.microserviceName.toLowerCase(), `${rootName}.controller.ts`),
+            join(this.config.ORIGIN_PATH, this.config.TARGET_FOLDER, this.config.API_FOLDER, this.microserviceName.toLowerCase(), `${rootName}.controller.ts`),
             rootControllerData
         );
         this.doGenerateParentServiceByTemplate(
-            join(__dirname, '..', this.config.TARGET_FOLDER, this.config.API_FOLDER, this.microserviceName.toLowerCase(), `${rootName}.service.ts`),
+            join(this.config.ORIGIN_PATH, this.config.TARGET_FOLDER, this.config.API_FOLDER, this.microserviceName.toLowerCase(), `${rootName}.service.ts`),
             rootServiceData
         );
         // LOG: parent folder created successfully
         console.log("parent folder created successfully");
 
         for (const [key, value] of Object.entries(metadata)) {
+            console.log(parentPath, key, value);
             this.subCreateAll(parentPath, key, value, metadata);
         }
     }
@@ -136,9 +140,9 @@ export class ConsumerGeneration implements IGeneration, IGenerationValidation {
         template = template.replace(/<SUB_NAME>/g, subName);
         template = template.replace(/<SUB_NAME_LOWER>/g, subName.toLowerCase());
         template = template.replace(/<SUB_NAME_UPPER>/g, subUpperName.toUpperCase());
-        template = template.replace(/<FILTER_FIELD>/g, `[${config.QUERY.FILTER_FIELD.join(", ")}]`);
-        template = template.replace(/<SEARCH_FIELD>/g, `[${config.QUERY.SEARCH_FIELD.join(", ")}]`);
-        template = template.replace(/<ORDER_FIELD>/g, `[${config.QUERY.ORDER_FIELD.join(", ")}]`);
+        template = template.replace(/<FILTER_FIELD>/g, `[${config.QUERY.FILTER_FIELD.map((i: string) => `'${i}'`).join(", ")}]`);
+        template = template.replace(/<SEARCH_FIELD>/g, `[${config.QUERY.SEARCH_FIELD.map((i: string) => `'${i}'`).join(", ")}]`);
+        template = template.replace(/<ORDER_FIELD>/g, `[${config.QUERY.ORDER_FIELD.map((i: string) => `'${i}'`).join(", ")}]`);
         template = template.replace(/<file-config>/g, this.configPath);
 
         writeFile(path, template, (err) => {
@@ -160,9 +164,7 @@ export class ConsumerGeneration implements IGeneration, IGenerationValidation {
         let parentNorName: string = microNameLower.split("_").map((i: string) => i[0].toUpperCase() + i.slice(1)).join("");
 
 
-        let meta = JSON.parse(this.input);
-        delete meta.MICROSERVICE_NAME;
-        delete meta.NAME;
+        let meta = this.meta;
 
         let moduleImports: string[] = [];
         let moduleInjects: string[] = [];
@@ -172,8 +174,10 @@ export class ConsumerGeneration implements IGeneration, IGenerationValidation {
             const nameLower = name.toLowerCase();
             const norm = nameLower.split('.').map((i: string) => i[0].toUpperCase() + i.slice(1)).join('');
             const modelNameLower = MODEL_NAME.toLowerCase().replace('_', '-');
-            moduleImports.push(`import { ${norm}Module } from './${modelNameLower}/${modelNameLower}.module'`);
-            moduleInjects.push(`${norm}Module`);
+            if (this.prefix[`${modelNameLower}Module`] || this.prefix[`${modelNameLower}All`]) {
+                moduleImports.push(`import { ${norm}Module } from './${modelNameLower}/${nameLower}.module'`);
+                moduleInjects.push(`${norm}Module`);
+            }
         }
 
 
@@ -221,7 +225,7 @@ export class ConsumerGeneration implements IGeneration, IGenerationValidation {
     }
 
     doDeleteStructure(targetFolder: string): void {
-        targetFolder = join(__dirname, targetFolder)
+        targetFolder = join(this.config.ORIGIN_PATH, targetFolder)
         if (existsSync(targetFolder)) {
             rmSync(targetFolder, { recursive: true });
             // LOG: output folder deleted successfully
@@ -231,15 +235,14 @@ export class ConsumerGeneration implements IGeneration, IGenerationValidation {
 
     private subCreateAll(parentPath: string, key: string, value: any, metadata: Record<string, any>): void {
         const subPath = join(parentPath, key.toLowerCase());
-        console.log(subPath)
         if (existsSync(subPath)) {
             mkdirSync(subPath, { recursive: true });
         }
 
         mkdirSync(subPath, { recursive: true });
         const rootName = value.NAME.toLowerCase();
-        const rootModuleData = readFileSync(join(__dirname, '..', './templates/sub-module.txt'), 'utf8').toString();
-        const rootControllerData = readFileSync(join(__dirname, '..', './templates/sub-controller.txt'), 'utf8').toString();
+        const rootModuleData = readFileSync(join(this.config.ORIGIN_PATH, 'templates/sub-module.txt'), 'utf8').toString();
+        const rootControllerData = readFileSync(join(this.config.ORIGIN_PATH, 'templates/sub-controller.txt'), 'utf8').toString();
 
         this.subCreateController(subPath, rootName, rootControllerData, metadata[key]);
         this.subCreateModule(subPath, rootName, rootModuleData, metadata[key]);
@@ -248,50 +251,117 @@ export class ConsumerGeneration implements IGeneration, IGenerationValidation {
     }
 
     private subCreateController(subPath: string, rootName: string, template: any, metadata: Record<string, any>): void {
-        writeFileSync(join(subPath, `${rootName}.controller.ts`), template, { flag: "w" });
-        this.doGenerateSubControllerByTemplate(
-            join(
-                subPath,
-                `${rootName}.controller.ts`
-            ),
-            template,
-            metadata,
-        );
+        if (!existsSync(subPath)) {
+            mkdirSync(subPath, { recursive: true });
+        }
+        writeFile(join(subPath, `${rootName}.controller.ts`), template, (e) => {
+            if (e) {
+                console.log(e)
+            } else {
+                console.log("Generated ".concat(join(subPath, `${rootName}.controller.ts`)));
+                this.doGenerateSubControllerByTemplate(
+                    join(
+                        subPath,
+                        `${rootName}.controller.ts`
+                    ),
+                    template,
+                    metadata,
+                );
+            }
+        })
     }
 
     private subCreateModule(subPath: string, rootName: string, template: any, metadata: Record<string, any>): void {
-        writeFileSync(join(subPath, `${rootName}.module.ts`), template, { flag: "w" });
-        this.doGenerateSubModuleByTemplate(
-            join(
-                subPath,
-                `${rootName}.module.ts`
-            ),
-            template,
-            metadata,
-        );
+        if (!existsSync(subPath)) {
+            mkdirSync(subPath, { recursive: true });
+        }
+        writeFile(join(subPath, `${rootName}.module.ts`), template, (e) => {
+            if (e) {
+                console.log(e)
+            } else {
+                console.log("Generated ".concat(join(subPath, `${rootName}.controller.ts`)));
+                this.doGenerateSubModuleByTemplate(
+                    join(
+                        subPath,
+                        `${rootName}.module.ts`
+                    ),
+                    template,
+                    metadata,
+                );
+            }
+        })
+    }
+
+    private updateModuleFile(path: string, moduleStringList: string[]): void {
+        if (existsSync(path)) {
+            const targetModuleString = readFileSync(path, 'utf8').toString();
+            let modules = StringProcessor.exportImports(targetModuleString);
+            const updatedModuleString = StringProcessor.updateImports(targetModuleString, [...modules, ...moduleStringList]);
+            writeFileSync(path, updatedModuleString);
+            console.log("Updated")
+        } else {
+            console.log("Not found")
+        }
+    }
+
+    private doProcessingRootFiles(microLower: string, micro: string, root: string): void {
+        if (this.prefix['rootModule']) {
+            const modulePath = join(this.config.ORIGIN_PATH, this.config.TARGET_FOLDER, this.config.API_FOLDER, root);
+            const rootModuleData = readFileSync(join(this.config.ORIGIN_PATH, 'templates/parent-module.txt'), 'utf8').toString();
+
+            mkdirSync(modulePath, { recursive: true });
+            this.doGenerateParentModuleByTemplate(
+                join(modulePath, `${microLower}.module.ts`),
+                rootModuleData,
+                micro
+            );
+        }
+
+        if (this.prefix['rootController']) {
+            const controllerPath = join(this.config.ORIGIN_PATH, this.config.TARGET_FOLDER, this.config.API_FOLDER, root);
+            const rootControllerData = readFileSync(join(this.config.ORIGIN_PATH, 'templates/parent-controller.txt'), 'utf8').toString();
+
+            mkdirSync(controllerPath, { recursive: true });
+            this.doGenerateParentControlerByTemplate(
+                join(controllerPath, `${microLower}.controller.ts`),
+                rootControllerData
+            );
+        }
+
+        if (this.prefix['rootService']) {
+            const servicePath = join(this.config.ORIGIN_PATH, this.config.TARGET_FOLDER, this.config.API_FOLDER, root);
+            const rootServiceData = readFileSync(join(this.config.ORIGIN_PATH, 'templates/parent-service.txt'), 'utf8').toString();
+
+            mkdirSync(servicePath, { recursive: true });
+            this.doGenerateParentServiceByTemplate(
+                join(servicePath, `${microLower}.service.ts`),
+                rootServiceData
+            );
+        }
     }
 
     async runtime(): Promise<void> {
-        const meta: Record<string, any> = JSON.parse(readFileSync(join(__dirname, '..', this.config.INPUT_PATH), 'utf-8').toString());
+        const meta: Record<string, any> = JSON.parse(readFileSync(join(this.config.ORIGIN_PATH, this.config.INPUT_PATH), 'utf-8').toString());
         const root = meta.MICROSERVICE_NAME.toLowerCase();
-        let micro = meta.NAME.toLowerCase();
+        let micro = meta.NAME;
         let microLower = micro.toLowerCase();
         delete meta.MICROSERVICE_NAME;
         delete meta.NAME;
 
-        let isReplaceOutput = false;
-        await inquirer.prompt({
-            type: 'input',
-            name: 'answer',
-            message: 'Do you want to create new? ',
-        }).then(answer => {
-            isReplaceOutput = ['y', 'Y', 'yes'].indexOf(answer.answer) !== -1;
-            this.prefix.replace = isReplaceOutput;
-        });
+        const _rootPath = join(this.config.ORIGIN_PATH, this.config.TARGET_FOLDER, this.config.API_FOLDER, root);
+        if (!existsSync(_rootPath)) mkdirSync(_rootPath, { recursive: true });
 
-        if (this.prefix.replace) {
+        let isGenAll = process.argv.filter(i => i.includes('--gen-all') || i.includes('-ga')).length > 0;
+        if (isGenAll) {
             if (this.validate()) {
-                this.doDeleteStructure(join(__dirname, '..', this.config.TARGET_FOLDER));
+                const models = Object.keys(meta).map((i: string) => i.toLowerCase());
+                for (const model of models) {
+                    this.prefix[`${model}All`] = true;
+                    this.prefix[`${model}Controler`] = true;
+                    this.prefix[`${model}Service`] = true;
+                }
+
+                this.doDeleteStructure(join(this.config.ORIGIN_PATH, this.config.TARGET_FOLDER));
                 await this.doGenerateStructure();
             } else {
                 // LOG: Some wrong then cannot generate
@@ -303,62 +373,31 @@ export class ConsumerGeneration implements IGeneration, IGenerationValidation {
                 type: 'input',
                 name: 'answer',
                 message: `Discovery ${microNameLower}.module.ts. Do you want to create new? `,
-            }).then(answer => {
-                isReplaceOutput = ['y', 'Y', 'yes'].indexOf(answer.answer) !== -1;
-                this.prefix['rootModule'] = isReplaceOutput;
+            }).then(i => {
+                this.prefix['rootModule'] = (['y', 'Y', 'yes'].indexOf(i.answer) !== -1);
+                let path = join(_rootPath, `${microLower}.module.ts`);
+                if (!existsSync(path)) writeFileSync(path, readFileSync('empty_parent-module.txt').toString());
             });
 
             await inquirer.prompt({
                 type: 'input',
                 name: 'answer',
                 message: `Discovery ${microNameLower}.controller.ts. Do you want to create new? `,
-            }).then(answer => {
-                isReplaceOutput = ['y', 'Y', 'yes'].indexOf(answer.answer) !== -1;
-                this.prefix['rootController'] = isReplaceOutput;
+            }).then(i => {
+                this.prefix['rootController'] = (['y', 'Y', 'yes'].indexOf(i.answer) !== -1);
+                let path = join(_rootPath, `${microLower}.controller.ts`);
+                if (!existsSync(path)) writeFileSync(path, readFileSync('empty_parent-controller.txt').toString());
             });
 
             await inquirer.prompt({
                 type: 'input',
                 name: 'answer',
                 message: `Discovery ${microNameLower}.service.ts. Do you want to create new? `,
-            }).then(answer => {
-                isReplaceOutput = ['y', 'Y', 'yes'].indexOf(answer.answer) !== -1;
-                this.prefix['rootService'] = isReplaceOutput;
+            }).then(i => {
+                this.prefix['rootService'] = (['y', 'Y', 'yes'].indexOf(i.answer) !== -1);
+                let path = join(_rootPath, `${microLower}.service.ts`);
+                if (!existsSync(path)) writeFileSync(path, readFileSync('empty_parent-service.txt').toString());
             });
-
-            if (this.prefix['rootModule']) {
-                const modulePath = join(__dirname, this.config.TARGET_FOLDER, this.config.API_FOLDER, root);
-                const rootModuleData = readFileSync(join(__dirname, '..', './templates/parent-module.txt'), 'utf8').toString();
-
-                mkdirSync(modulePath, { recursive: true });
-                this.doGenerateParentModuleByTemplate(
-                    join(modulePath, `${microLower}.service.ts`),
-                    rootModuleData,
-                    micro
-                );
-            }
-
-            if (this.prefix['rootController']) {
-                const controllerPath = join(__dirname, this.config.TARGET_FOLDER, this.config.API_FOLDER, root);
-                const rootControllerData = readFileSync(join(__dirname, '..', './templates/parent-controller.txt'), 'utf8').toString();
-
-                mkdirSync(controllerPath, { recursive: true });
-                this.doGenerateParentControlerByTemplate(
-                    join(controllerPath, `${microLower}.service.ts`),
-                    rootControllerData
-                );
-            }
-
-            if (this.prefix['rootService']) {
-                const servicePath = join(__dirname, this.config.TARGET_FOLDER, this.config.API_FOLDER, root);
-                const rootServiceData = readFileSync(join(__dirname, '..', './templates/parent-service.txt'), 'utf8').toString();
-
-                mkdirSync(servicePath, { recursive: true });
-                this.doGenerateParentServiceByTemplate(
-                    join(servicePath, `${microLower}.service.ts`),
-                    rootServiceData
-                );
-            }
 
             const models = Object.keys(meta).map((i: string) => i.toLowerCase());
             for (const model of models) {
@@ -367,51 +406,71 @@ export class ConsumerGeneration implements IGeneration, IGenerationValidation {
                 const modelAPIPathAll = join(subPath, model);
                 const modelAPIPathController = join(modelAPIPathAll, `${meta[upper].NAME.toLowerCase()}.controller.ts`);
                 const modelAPIPathModule = join(modelAPIPathAll, `${meta[upper].NAME.toLowerCase()}.module.ts`);
-                if (existsSync(modelAPIPathAll)) {
+                await inquirer.prompt({
+                    message: `Discovery ${modelAPIPathAll}. Do you want to create new?`,
+                    type: 'input',
+                    name: 'answer'
+                }).then(i => {
+                    let isTrue = (['y', 'Y', 'yes'].indexOf(i.answer) !== -1);
+                    this.prefix[`${model}All`] = isTrue;
+                    this.prefix[`${model}Module`] = isTrue;
+                    this.prefix[`${model}Controller`] = isTrue;
+                })
+
+                if (!this.prefix[`${model}All`]) {
                     await inquirer.prompt({
-                        message: `Discovery ${modelAPIPathAll}. Do you want to create new?`,
+                        message: `Discovery ${modelAPIPathController}. Do you want to create new?`,
                         type: 'input',
                         name: 'answer'
                     }).then(i => {
-                        this.prefix[`${model}All`] = (['y', 'Y', 'yes'].indexOf(i.answer) !== -1);
+                        this.prefix[`${model}Controller`] = (['y', 'Y', 'yes'].indexOf(i.answer) !== -1);
                     })
+
+                    await inquirer.prompt({
+                        message: `Discovery ${modelAPIPathModule}. Do you want to create new?`,
+                        type: 'input',
+                        name: 'answer'
+                    }).then(i => {
+                        this.prefix[`${model}Module`] = (['y', 'Y', 'yes'].indexOf(i.answer) !== -1);
+                    });
                 }
+            }
+            // update module
+            let moduleInjects: string[] = [];
+            let _meta = JSON.parse(readFileSync(join(this.config.ORIGIN_PATH, this.config.INPUT_PATH), 'utf8').toString());
+            if (_meta.MICROSERVICE_NAME) delete _meta.MICROSERVICE_NAME;
+            if (_meta.NAME) delete _meta.NAME;
+            let upperName = this.name;
+
+            for (const [_, CONFIG] of Object.entries(_meta)) {
+                const name = (CONFIG as Record<string, any>).NAME;
+                const nameLower = name.toLowerCase();
+                const norm = nameLower.split('.').map((i: string) => i[0].toUpperCase() + i.slice(1)).join('');
+                const model = _.toLowerCase();
+                const upper = model.toUpperCase();
+                const subPath = join(this.config.ORIGIN_PATH, this.config.TARGET_FOLDER, this.config.API_FOLDER, root);
+                const modelAPIPathAll = join(subPath, model);
+
 
                 if (this.prefix[`${model}All`]) {
-                    this.subCreateController(modelAPIPathAll, meta[upper].NAME, readFileSync('./templates/sub-controller.txt', 'utf8').toString(), meta[upper]);
-                    this.subCreateController(modelAPIPathAll, meta[upper].NAME, readFileSync('./templates/sub-module.txt', 'utf8').toString(), meta[upper]);
+                    this.subCreateController(modelAPIPathAll, meta[upper].NAME, readFileSync(join(this.config.ORIGIN_PATH, 'templates/sub-controller.txt'), 'utf8').toString(), meta[upper]);
+                    this.subCreateModule(modelAPIPathAll, meta[upper].NAME, readFileSync(join(this.config.ORIGIN_PATH, 'templates/sub-module.txt'), 'utf8').toString(), meta[upper]);
+                    moduleInjects.push(`${norm}Module`);
                 } else {
-                    if (existsSync(modelAPIPathController)) {
-                        await inquirer.prompt({
-                            message: `Discovery ${modelAPIPathController}. Do you want to create new?`,
-                            type: 'input',
-                            name: 'answer'
-                        }).then(i => {
-                            this.prefix[`${model}Controller`] = (['y', 'Y', 'yes'].indexOf(i.answer) !== -1);
-                        })
+                    if (this.prefix[`${model}Module`]) {
+                        this.subCreateModule(modelAPIPathAll, meta[upper].NAME, readFileSync(join(this.config.ORIGIN_PATH, 'templates/sub-module.txt'), 'utf8').toString(), meta[upper]);
+                        moduleInjects.push(`${norm}Module`);
                     }
-
-                    if (existsSync(modelAPIPathModule)) {
-                        await inquirer.prompt({
-                            message: `Discovery ${modelAPIPathModule}. Do you want to create new?`,
-                            type: 'input',
-                            name: 'answer'
-                        }).then(i => {
-                            this.prefix[`${model}Module`] = (['y', 'Y', 'yes'].indexOf(i.answer) !== -1);
-                        })
-                    }
-
                     if (this.prefix[`${model}Controller`]) {
-                        this.subCreateController(modelAPIPathAll, meta[upper].NAME, readFileSync('./templates/sub-controller.txt', 'utf8').toString(), meta[upper]);
-                    }
-
-                    if (this.prefix[`${model}Controller`]) {
-                        this.subCreateModule(modelAPIPathAll, meta[upper].NAME, readFileSync('./templates/sub-module.txt', 'utf8').toString(), meta[upper]);
+                        this.subCreateController(modelAPIPathAll, meta[upper].NAME, readFileSync(join(this.config.ORIGIN_PATH, 'templates/sub-controller.txt'), 'utf8').toString(), meta[upper]);
                     }
                 }
 
             }
-        }
 
+            const targetPath = join(this.config.ORIGIN_PATH, this.config.TARGET_FOLDER, this.config.API_FOLDER, this.microserviceName.toUpperCase(), `${upperName.toLowerCase()}.module.ts`);
+            this.doProcessingRootFiles(microLower, micro, root);
+            this.updateModuleFile(targetPath, moduleInjects);
+        }
     }
 }

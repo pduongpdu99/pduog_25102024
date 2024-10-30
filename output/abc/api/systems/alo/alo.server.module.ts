@@ -2,10 +2,10 @@ import { Logger, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
 import { SYSTEMS as APP_CONFIG } from '@common/config/app.config.json';
-import { ROLE_SERVER as CONFIG } from '@common/config/C:\Users\pduon\OneDrive\Desktop\projects\pduog_25102024\dist\input.json';
+import { ALO_SERVER as CONFIG } from '@common/config/src\input.json';
 import { TransportModule } from '@common/transport';
 import { doParsingMessage } from '@server/common/messages/parser.message';
-import { RoleServerController } from './roleserver.controller';
+import { AloServerController } from './aloserver.controller';
 
 @Module({
     imports: [
@@ -14,7 +14,7 @@ import { RoleServerController } from './roleserver.controller';
         }),
         TransportModule.register(CONFIG.MICROSERVICE, CONFIG.NAME),
     ],
-    controllers: [RoleServerController],
+    controllers: [AloServerController],
     providers: [
         Logger,
         {
@@ -24,7 +24,7 @@ import { RoleServerController } from './roleserver.controller';
                     defaultSystemFields: false, 
                 },
                 list: {
-                    filterFields: [permission],
+                    filterFields: ['permission'],
                     searchFields: [], 
                     orderFields: [],
                 },
@@ -40,4 +40,4 @@ import { RoleServerController } from './roleserver.controller';
         },
     ],
 })
-export class RoleServerModule {}
+export class AloServerModule {}

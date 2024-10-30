@@ -34,5 +34,39 @@
             "PATCH": "<patch-message-pattern>",
             "DELETE": "<delete-message-pattern>"
         }
+    },
+    "PERMISSION": {
+        "NAME": "permission.server",
+        "MICROSERVICE": "PERMISSIONS",
+        "I18N": "sub-upper-name",
+        "QUERY": {
+            "FILTER_FIELD": ["permission"],
+            "SEARCH_FIELD": [],
+            "ORDER_FIELD": []
+        },
+        "API": {
+            "GET_LIST": "<get-list-message-pattern>",
+            "GET_BY_ID": "<get-by-id-message-pattern>",
+            "POST": "<post-message-pattern>",
+            "PATCH": "<patch-message-pattern>",
+            "DELETE": "<delete-message-pattern>"
+        }
+    },
+    "ALO": {
+        "NAME": "alo.server",
+        "MICROSERVICE": "ALOS",
+        "I18N": "sub-upper-name",
+        "QUERY": {
+            "FILTER_FIELD": ["permission"],
+            "SEARCH_FIELD": [],
+            "ORDER_FIELD": []
+        },
+        "API": {
+            "GET_LIST": "<get-list-message-pattern>",
+            "GET_BY_ID": "<get-by-id-message-pattern>",
+            "POST": "<post-message-pattern>",
+            "PATCH": "<patch-message-pattern>",
+            "DELETE": "<delete-message-pattern>"
+        }
     }
 }

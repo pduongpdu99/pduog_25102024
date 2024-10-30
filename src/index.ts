@@ -6,12 +6,12 @@ import { ConsumerGeneration } from "./util/ConsumerGeneration";
 // const file = new File([blob], "input.json", { type: "application/json", lastModified: Date.now() });
 
 const CONFIG = {
-    TARGET_FOLDER: "output",
+    TARGET_FOLDER: "../output",
+    ORIGIN_PATH: 'src',
+    TARGET_MODULE_FOLDER: 'target',
     API_FOLDER: 'abc/api',
     INPUT_PATH: './input.json'
 }
 
 // new ConsumerGeneration('input.json', CONFIG).doDeleteStructure(CONFIG.TARGET_FOLDER);
-
-console.log(join(__dirname, CONFIG.INPUT_PATH))
-new ConsumerGeneration(join(__dirname, CONFIG.INPUT_PATH), CONFIG).runtime();
+new ConsumerGeneration(join('src', CONFIG.INPUT_PATH), CONFIG).runtime();

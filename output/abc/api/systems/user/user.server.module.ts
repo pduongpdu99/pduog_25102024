@@ -2,7 +2,7 @@ import { Logger, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
 import { SYSTEMS as APP_CONFIG } from '@common/config/app.config.json';
-import { USER_SERVER as CONFIG } from '@common/config/C:\Users\pduon\OneDrive\Desktop\projects\pduog_25102024\dist\input.json';
+import { USER_SERVER as CONFIG } from '@common/config/src\input.json';
 import { TransportModule } from '@common/transport';
 import { doParsingMessage } from '@server/common/messages/parser.message';
 import { UserServerController } from './userserver.controller';
@@ -24,7 +24,7 @@ import { UserServerController } from './userserver.controller';
                     defaultSystemFields: false, 
                 },
                 list: {
-                    filterFields: [name, email],
+                    filterFields: ['name', 'email'],
                     searchFields: [], 
                     orderFields: [],
                 },

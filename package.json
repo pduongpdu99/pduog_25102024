@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start:node": "node dist/index.js",
-    "start": "npx ts-node index.ts",
+    "start": "npx ts-node src/index.ts",
     "start:watch": "npx ts-node index.ts --watch",
     "build": "tsc && cpx src/**/*.txt dist/"
   },

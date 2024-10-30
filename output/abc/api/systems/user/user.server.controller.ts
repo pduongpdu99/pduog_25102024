@@ -4,7 +4,7 @@ import { ClientProxy } from '@nestjs/microservices';
 import { Request } from 'express';
 
 // Import config
-import { USER_SERVER as CONFIG } from '@common/config/C:\Users\pduon\OneDrive\Desktop\projects\pduog_25102024\dist\input.json';
+import { USER_SERVER as CONFIG } from '@common/config/src\input.json';
 
 // Import libs
 import { QueryPipe } from '@common/pipe/query-pipe';

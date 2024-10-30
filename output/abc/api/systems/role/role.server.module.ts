@@ -2,10 +2,10 @@ import { Logger, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
 import { SYSTEMS as APP_CONFIG } from '@common/config/app.config.json';
-import { <SUB_NAME_UPPER> as CONFIG } from '@common/config/<file-config>';
+import { ROLE_SERVER as CONFIG } from '@common/config/src\input.json';
 import { TransportModule } from '@common/transport';
 import { doParsingMessage } from '@server/common/messages/parser.message';
-import { <SUB_NAME>Controller } from './<SUB_NAME_LOWER>.controller';
+import { RoleServerController } from './roleserver.controller';
 
 @Module({
     imports: [
@@ -14,7 +14,7 @@ import { <SUB_NAME>Controller } from './<SUB_NAME_LOWER>.controller';
         }),
         TransportModule.register(CONFIG.MICROSERVICE, CONFIG.NAME),
     ],
-    controllers: [<SUB_NAME>Controller],
+    controllers: [RoleServerController],
     providers: [
         Logger,
         {
@@ -24,9 +24,9 @@ import { <SUB_NAME>Controller } from './<SUB_NAME_LOWER>.controller';
                     defaultSystemFields: false, 
                 },
                 list: {
-                    filterFields: <FILTER_FIELD>,
-                    searchFields: <SEARCH_FIELD>, 
-                    orderFields: <ORDER_FIELD>,
+                    filterFields: ['permission'],
+                    searchFields: [], 
+                    orderFields: [],
                 },
             },
         },
@@ -40,4 +40,4 @@ import { <SUB_NAME>Controller } from './<SUB_NAME_LOWER>.controller';
         },
     ],
 })
-export class <SUB_NAME>Module {}
+export class RoleServerModule {}
